@@ -1,9 +1,10 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.template import loader, RequestContext
-from .models import Question
+from .models import Question, Choice
 from django.http import Http404
 from django.shortcuts import get_object_or_404, get_list_or_404
+from django.core.urlresolvers import reverse
 
 # Create your views here.
 def index(req):
@@ -26,8 +27,21 @@ def detail(req, question_id):
 
 
 def result(req, question_id):
-
-    return HttpResponse("You're looking at result of question %s." % question_id)
+    # return HttpResponse("You're looking at result of question %s." % question_id)
+    question = get_object_or_404(Question, pk=question_id)
+    return render(req, 'polls/result.html', {'question': question})
 
 def vote(req, question_id):
-    return HttpResponse("You're voting on question %s." % question_id)
+    # return HttpResponse("You're voting on question %s." % question_id)
+    question = get_object_or_404(Question, pk=question_id)
+
+    try:
+        selected_choice = question.choice_set.get(pk=req.POST['choice'])
+    except (KeyError, Choice.DoesNotExist):
+        return render(req, "polls/detail.html", {'question': question, 'error_message': "You didn't select a choice"})
+
+    else:
+        selected_choice.votes += 1
+        selected_choice.save()
+        # 成功处理一个POST 数据之后，需要 重定向防止用户使用back 而提交多次
+        return HttpResponseRedirect(reverse("polls:result", args=(question.id,)))
